@@ -26,12 +26,25 @@ class ItemView extends React.Component {
             if (res.data.itemId) {
                 this.setState({itemId: res.data.itemId, boardId: res.data.boardId});
                 const itemId = res.data.itemId;
-                await monday.api(`query { items (ids: ${itemId}) { name column_values { id text title} } }`).then(res => {
+                await monday.api(`query { items (ids: ${itemId}) { name column_values { id text title} } }`).then(async res => {
                     const item = res.data.items[0];
                     const columnValues = item.column_values;
                     const name = item.name;
-                    const status = columnValues.find(columnValue => columnValue.title === "Status" || columnValue.title === "status").text;
-                    const description = columnValues.find(columnValue => columnValue.title === "Description" || columnValue.title === "description").text;
+                    const status = columnValues.find(columnValue => columnValue.title === "Status" || columnValue.title === "status")?.text ?? '';
+
+                    //create a new column in the board and name it "Description" to get the description value if not exist.
+                    let description = '';
+                    const isDescriptionColumnExists = columnValues.find(columnValue => columnValue.title === "Description" || columnValue.title === "description");
+                    //if the description column exists, get the value.
+                    if (isDescriptionColumnExists) {
+                        description = isDescriptionColumnExists.text;
+                    } else {
+                        //if the description column doesn't exist, create a new column.
+                        await monday.api(`mutation { create_column (board_id: ${this.state.boardId}, title: "Description", column_type: text) { id } }`).then(res => {
+                            console.log(res);
+                        });
+                    }
+
                     this.setState({name: name, status: status, description: description});
                 });
             }
